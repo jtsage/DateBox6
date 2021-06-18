@@ -1,0 +1,23 @@
+{
+  "name": "datebox6",
+  "title": "DateBox6",
+  "description": "Plugin to provide a CSS framework agnostic Date and Time Picker",
+  "version": "5.3.3",
+  "homepage": "http://datebox6.jtsage.dev/",
+  "author": {
+    "name": "JTSage and other contributors"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jtsage/datebox6.git"
+  },
+  "bugs": "https://github.com/jtsage/datebox6/issues",
+  "license": "MIT",
+  "scripts": {},
+  "devDependencies": {
+    "@babel/eslint-parser": "^7.14.5",
+    "@babel/core": "^7.14.3",
+    "eslint": "^7.27.0"
+  },
+  "dependencies": {}
+}
