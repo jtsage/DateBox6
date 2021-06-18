@@ -9,46 +9,94 @@
 
 /* global DateBoxDate */
 class DateBoxDate {
-	date      = null;
-	hasTime   = false;
-	localFunc = function(string) { return `000000000000:${string}`; };
+	date          = null;
+	#forcedLocale = null;
+	currentLocale = null;
 
-
-	constructor(date = null, hasTime = false, localFunc = null) {
-		//Object.prototype.toString.call(x) === '[object Date]'
-		//new Intl.DateTimeFormat('en-US', { weekday: 'long' })
-		//new Intl.DateTimeFormat('en-US', { month: 'long' })
-		if ( localFunc !== null ) { this.localFunc = localFunc; }
-		if ( date !== null ) {
-			this.date = date;
-		} else if ( hasTime === false ) {
-			const tempDate = new Date();
-			this.date = new Date(
-				tempDate.getFullYear(),
-				tempDate.getMonth(),
-				tempDate.getDate(),
-				8, 0, 0, 0
-			);
+	get forceLocale() { return this.#forcedLocale; }
+	set forceLocale(value) {
+		this.#forcedLocale = value;
+		if ( value !== null ) {
+			this.currentLocale = value;
 		} else {
-			this.date = new Date();
+			this.currentLocale = Intl.DateTimeFormat().resolvedOptions().locale;
 		}
 	}
 
+	constructor(...args) {
+		let fallBack = true;
+
+		if ( args.length === 1 && typeof args[0] === 'number' ) {
+			this.date = new Date(args[0]);
+			fallBack = false;
+		}
+		if ( args.length === 1 && Object.prototype.toString.call(args[0]) === '[object Date]') {
+			this.date = new Date(
+				args[0].getFullYear(),
+				args[0].getMonth(),
+				args[0].getDate(),
+				args[0].getHours(),
+				args[0].getMinutes(),
+				args[0].getSeconds(),
+				0
+			);
+			fallBack = false;
+		}
+		if ( args.length === 3 ) {
+			this.date = new Date(
+				parseInt(args[0], 10),
+				parseInt(args[1], 10),
+				parseInt(args[2], 10),
+				8, 0, 0, 0
+			);
+			fallBack = false;
+		}
+		if ( args.length === 6 ) {
+			this.date = new Date(
+				parseInt(args[0], 10),
+				parseInt(args[1], 10),
+				parseInt(args[2], 10),
+				parseInt(args[3], 10),
+				parseInt(args[4], 10),
+				parseInt(args[5], 10),
+				0
+			);
+			fallBack = false;
+		}
+		if ( args.length === 2 ) {
+			// parse format (arg[1]), date string (arg[0])
+			fallBack = false;
+		}
+		if ( fallBack ) {
+			this.date = new Date();
+		}
+
+		this.forceLocale = null;
+	}
+
 	get copy() {
-		return new DateBoxDate(new Date(this.date.getTime()), this.hasTime, this.localFunc);
+		return new DateBoxDate(this.date.getTime());
 	}
 
 	// a : Abbreviated Name of Day
-	get a() { return this.localFunc('daysOfWeekShort')[this.w]; }
+	get a() {
+		return Intl.DateTimeFormat(this.currentLocale, { weekday : 'short' }).format(this.date);
+	}
 
 	// A : Full Name of Day
-	get A() { return this.localFunc('daysOfWeek')[this.w]; }
+	get A() {
+		return Intl.DateTimeFormat(this.currentLocale, { weekday : 'long' }).format(this.date);
+	}
 
 	// b : Abbreviated Name of Month
-	get b() { return this.localFunc('monthsOfYearShort')[this.m - 1]; }
+	get b() {
+		return new Intl.DateTimeFormat(this.currentLocale, { month : 'short' }).format(this.date);
+	}
 
 	// B : Full Name of Month
-	get B() { return this.localFunc('monthsOfYear')[this.m - 1]; }
+	get B() {
+		return new Intl.DateTimeFormat(this.currentLocale, { month : 'long' }).format(this.date);
+	}
 
 	// C : Century (First 2 digits of a modern year)
 	get C() { return parseInt(this.Y / 100, 10); }
@@ -127,7 +175,7 @@ class DateBoxDate {
 	}
 
 	// %p : Meridian Letters (AM/PM) in uppercase
-	get p() { return this.localFunc('meridiem')[(this.H < 12) ? 0 : 1]; }
+	get p() { return ['am', 'pm'][(this.H < 12) ? 0 : 1]; }
 
 	// %P : Meridian Letters (AM/PM) in lowercase
 	get P() { return this.p.toUpperCase(); }
@@ -225,15 +273,14 @@ class DateBoxDate {
 	changedCopy(adjust, override) {
 		const myAdj  = Object.assign([0, 0, 0, 0, 0, 0], adjust );
 		const myOver = Object.assign([0, 0, 0, 0, 0, 0], override );
-		return new DateBoxDate(new Date(
+		return new DateBoxDate(
 			( ( myOver[ 0 ] > 0 ) ? myOver[ 0 ] : this.Y + myAdj[ 0 ] ),
 			( ( myOver[ 1 ] > 0 ) ? myOver[ 1 ] : this.m + myAdj[ 1 ] ),
 			( ( myOver[ 2 ] > 0 ) ? myOver[ 2 ] : this.d + myAdj[ 2 ] ),
 			( ( myOver[ 3 ] > 0 ) ? myOver[ 3 ] : this.H + myAdj[ 3 ] ),
 			( ( myOver[ 4 ] > 0 ) ? myOver[ 4 ] : this.M + myAdj[ 4 ] ),
-			( ( myOver[ 5 ] > 0 ) ? myOver[ 5 ] : this.S + myAdj[ 5 ] ),
-			0
-		), this.hasTime, this.localFunc);
+			( ( myOver[ 5 ] > 0 ) ? myOver[ 5 ] : this.S + myAdj[ 5 ] )
+		);
 	}
 
 	setDWeek (type, num) {
@@ -286,5 +333,25 @@ class DateBoxDate {
 			default:
 				return 0;
 		}
+	}
+
+	format ( dateFormat, locale = null ) {
+		const backupLocale = this.currentLocale;
+
+		if ( locale !== null ) { this.currentLocale = locale; }
+
+		const returnValue = dateFormat.replace(/%(0|-)*([1-9a-zA-Z])/g, (match, pad, operator) => {
+			if ( typeof this[operator] !== 'undefined' ) {
+				if ( pad === '-' ) {
+					return this[operator];
+				}
+				return this.z(operator);
+			}
+			return match;
+		});
+
+		if ( locale !== null ) { this.currentLocale = backupLocale; }
+		
+		return returnValue;
 	}
 }
