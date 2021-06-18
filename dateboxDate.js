@@ -15,6 +15,9 @@ class DateBoxDate {
 
 
 	constructor(date = null, hasTime = false, localFunc = null) {
+		//Object.prototype.toString.call(x) === '[object Date]'
+		//new Intl.DateTimeFormat('en-US', { weekday: 'long' })
+		//new Intl.DateTimeFormat('en-US', { month: 'long' })
 		if ( localFunc !== null ) { this.localFunc = localFunc; }
 		if ( date !== null ) {
 			this.date = date;
