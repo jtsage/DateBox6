@@ -387,7 +387,7 @@ class DateBoxDate {
 		if ( locale !== null ) { this.currentLocale = locale; }
 
 		const rgxNames = [];
-		const newDateParts = {
+		const dPart = {
 			year     : null,
 			month    : null,
 			date     : null,
@@ -455,36 +455,36 @@ class DateBoxDate {
 			switch ( rgxNames[i-1] ) {
 				case 's' : return new Date( intVal * 1000 );
 				case 'Y' :
-				case 'G' : newDateParts.year = intVal; break;
-				case 'E' : newDateParts.year = intVal - 543; break;
+				case 'G' : dPart.year = intVal; break;
+				case 'E' : dPart.year = intVal - 543; break;
 				case 'y' :
-				case 'g' : newDateParts.year = (( intVal < 50 ) ? 2000 : 1900) + intVal; break;
-				case 'm' : newDateParts.month = intVal - 1; break;
-				case 'd' : newDateParts.date = intVal; break;
+				case 'g' : dPart.year = (( intVal < 50 ) ? 2000 : 1900) + intVal; break;
+				case 'm' : dPart.month = intVal - 1; break;
+				case 'd' : dPart.date = intVal; break;
 				case 'H' :
 				case 'k' :
 				case 'I' :
-				case 'l' : newDateParts.hour = intVal; break;
-				case 'M' : newDateParts.mins = intVal; break;
-				case 'S' : newDateParts.secs = intVal; break;
-				case 'u' : newDateParts.weekDay = intVal - 1; break;
-				case 'w' : newDateParts.weekDay = intVal; break;
-				case 'j' : newDateParts.yearDay = intVal; break;
-				case 'V' : newDateParts.week = intVal; newDateParts.weekType = 4; break;
-				case 'U' : newDateParts.week = intVal; newDateParts.weekType = 0; break;
-				case 'W' : newDateParts.week = intVal; newDateParts.weekType = 1; break;
+				case 'l' : dPart.hour = intVal; break;
+				case 'M' : dPart.mins = intVal; break;
+				case 'S' : dPart.secs = intVal; break;
+				case 'u' : dPart.weekDay = intVal - 1; break;
+				case 'w' : dPart.weekDay = intVal; break;
+				case 'j' : dPart.yearDay = intVal; break;
+				case 'V' : dPart.week = intVal; dPart.weekType = 4; break;
+				case 'U' : dPart.week = intVal; dPart.weekType = 0; break;
+				case 'W' : dPart.week = intVal; dPart.weekType = 1; break;
 				case 'p' :
 				case 'P' :
-					newDateParts.meridian = ( rgxInput[i].toLowerCase() === 'am' ) ? -1 : 1;
+					dPart.meridian = ( rgxInput[i].toLowerCase() === 'am' ) ? -1 : 1;
 					break;
 				case 'b' : {
 					const monthIndex = this.monthsShort.indexOf( rgxInput[i] );
-					if ( monthIndex > -1 ) { newDateParts.month = monthIndex; }
+					if ( monthIndex > -1 ) { dPart.month = monthIndex; }
 					break;
 				}
 				case 'B' : {
 					const monthIndex = this.monthsLong.indexOf( rgxInput[i] );
-					if ( monthIndex > -1 ) { newDateParts.month = monthIndex; }
+					if ( monthIndex > -1 ) { dPart.month = monthIndex; }
 					break;
 				}
 				default :
@@ -492,33 +492,33 @@ class DateBoxDate {
 			}
 		}
 
-		if ( newDateParts.meridian !== null ) {
-			if ( newDateParts.meridian === -1 && newDateParts.hour === 12 ) {
-				newDateParts.hour = 0;
+		if ( dPart.meridian !== null ) {
+			if ( dPart.meridian === -1 && dPart.hour === 12 ) {
+				dPart.hour = 0;
 			}
-			if ( newDateParts.meridian === 1 && newDateParts.hour !== 12 ) {
-				newDateParts.hour = newDateParts.hour + 12;
+			if ( dPart.meridian === 1 && dPart.hour !== 12 ) {
+				dPart.hour = dPart.hour + 12;
 			}
 		}
 		
 		const testDate = new Date(
-			this.#unNull( newDateParts.year, 0 ),
-			this.#unNull( newDateParts.month, 0 ),
-			this.#unNull( newDateParts.date, 1 ),
-			this.#unNull( newDateParts.hour, 8 ),
-			this.#unNull( newDateParts.mins, 0 ),
-			this.#unNull( newDateParts.secs, 0 ),
+			this.#unNull( dPart.year, 0 ),
+			this.#unNull( dPart.month, 0 ),
+			this.#unNull( dPart.date, 1 ),
+			this.#unNull( dPart.hour, 8 ),
+			this.#unNull( dPart.mins, 0 ),
+			this.#unNull( dPart.secs, 0 ),
 			0
 		);
 
-		if ( newDateParts.year < 100 && newDateParts.year !== -1 ) {
-			testDate.setFullYear(newDateParts.year);
+		if ( dPart.year < 100 && dPart.year !== -1 ) {
+			testDate.setFullYear(dPart.year);
 		}
 
 		/* If we got at least Y-m-d, and it's valid, return it */
-		if ( newDateParts.year !== null &&
-			newDateParts.month !== null &&
-			newDateParts.date !== null ) {
+		if ( dPart.year !== null &&
+			dPart.month !== null &&
+			dPart.date !== null ) {
 
 			if ( !isNaN(testDate.getDate()) ) {
 				this.currentLocale = backupLocale;
@@ -526,10 +526,10 @@ class DateBoxDate {
 			}
 		}
 
-		if ( newDateParts.yearDay !== null ) {
+		if ( dPart.yearDay !== null ) {
 			testDate.setMonth(0);
 			testDate.setDate(1);
-			testDate.setDate(newDateParts.yearDay);
+			testDate.setDate(dPart.yearDay);
 		}
 
 		if ( locale !== null ) { this.currentLocale = backupLocale; }
