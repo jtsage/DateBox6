@@ -25,6 +25,7 @@ class DateBoxDate {
 
 	constructor(...args) {
 		let fallBack = true;
+		this.forceLocale = null;
 
 		if ( args.length === 1 && typeof args[0] === 'number' ) {
 			this.date = new Date(args[0]);
@@ -42,12 +43,37 @@ class DateBoxDate {
 			);
 			fallBack = false;
 		}
-		if ( args.length === 3 ) {
+		if ( args.length === 2 ) {
+			const parsedDate = this.parse(args[0], args[1]);
 			this.date = new Date(
-				parseInt(args[0], 10),
-				parseInt(args[1], 10),
-				parseInt(args[2], 10),
-				8, 0, 0, 0
+				parsedDate.getFullYear(),
+				parsedDate.getMonth(),
+				parsedDate.getDate(),
+				parsedDate.getHours(),
+				parsedDate.getMinutes(),
+				parsedDate.getSeconds(),
+				0
+			);
+			fallBack = false;
+		}
+		if ( args.length === 3 ) {
+			if ( typeof args[0] === 'number' ) {
+				this.date = new Date(
+					parseInt(args[0], 10),
+					parseInt(args[1], 10),
+					parseInt(args[2], 10),
+					8, 0, 0, 0
+				);
+			}
+			const parsedDate = this.parse(args[0], args[1], args[2]);
+			this.date = new Date(
+				parsedDate.getFullYear(),
+				parsedDate.getMonth(),
+				parsedDate.getDate(),
+				parsedDate.getHours(),
+				parsedDate.getMinutes(),
+				parsedDate.getSeconds(),
+				0
 			);
 			fallBack = false;
 		}
@@ -71,7 +97,7 @@ class DateBoxDate {
 			this.date = new Date();
 		}
 
-		this.forceLocale = null;
+		
 	}
 
 	get copy() {
@@ -351,7 +377,179 @@ class DateBoxDate {
 		});
 
 		if ( locale !== null ) { this.currentLocale = backupLocale; }
-		
+
 		return returnValue;
+	}
+
+	parse (dateString, dateFormat, locale = null ) {
+		const backupLocale = this.currentLocale;
+
+		if ( locale !== null ) { this.currentLocale = locale; }
+
+		const rgxNames = [];
+		const newDateParts = {
+			year     : null,
+			month    : null,
+			date     : null,
+			hour     : null,
+			mins     : null,
+			secs     : null,
+			yearDay  : null,
+			meridian : null,
+			week     : null,
+			weekType : 4,
+			weekDay  : null,
+		};
+
+		if ( dateFormat === '%J' ) {
+			const tempDate = new Date(dateString);
+			if ( isNaN(tempDate.getDate()) ) {
+				this.currentLocale = backupLocale;
+				return null;
+			}
+			this.currentLocale = backupLocale;
+			return tempDate;
+		}
+
+		let formatRegex = dateFormat.replace( /%(0|-)*([a-z])/gi, ( match, pad, operator ) => {
+			rgxNames.push( operator );
+			switch ( operator ) {
+				case 'p' :
+				case 'P' :
+				case 'b' :
+				case 'B' : return `(${match}|.+?)`;
+				case 'H' :
+				case 'k' :
+				case 'I' :
+				case 'l' :
+				case 'm' :
+				case 'M' :
+				case 'S' :
+				case 'V' :
+				case 'U' :
+				case 'u' :
+				case 'W' :
+				case 'd' : return `(${match}|[0-9]{${((pad === '0') ? '1,' : '')}2})`;
+				case 'j' : return `(${match}|[0-9]{3})`;
+				case 's' : return `(${match}|[0-9]+)`;
+				case 'g' :
+				case 'y' : return `(${match}|[0-9]{2})`;
+				case 'E' :
+				case 'G' :
+				case 'Y' : return `(${match}|[0-9]{1,4})`;
+				default  : rgxNames.pop(); return '.+?';
+			}
+		});
+
+		formatRegex = new RegExp( `^${formatRegex}$` );
+		const rgxInput  = formatRegex.exec(dateString);
+		const rgxFormat = formatRegex.exec(dateFormat);
+
+		if ( rgxInput === null || rgxInput.length !== rgxFormat.length ) {
+			// Parse Failed.
+			return null;
+		}
+
+		for ( let i = 1; i < rgxInput.length; i++ ) {
+			const intVal = parseInt( rgxInput[i], 10);
+			switch ( rgxNames[i-1] ) {
+				case 's' : return new Date( intVal * 1000 );
+				case 'Y' :
+				case 'G' : newDateParts.year = intVal; break;
+				case 'E' : newDateParts.year = intVal - 543; break;
+				case 'y' :
+				case 'g' : newDateParts.year = (( intVal < 50 ) ? 2000 : 1900) + intVal; break;
+				case 'm' : newDateParts.month = intVal - 1; break;
+				case 'd' : newDateParts.date = intVal; break;
+				case 'H' :
+				case 'k' :
+				case 'I' :
+				case 'l' : newDateParts.hour = intVal; break;
+				case 'M' : newDateParts.mins = intVal; break;
+				case 'S' : newDateParts.secs = intVal; break;
+				case 'u' : newDateParts.weekDay = intVal - 1; break;
+				case 'w' : newDateParts.weekDay = intVal; break;
+				case 'j' : newDateParts.yearDay = intVal; break;
+				case 'V' : newDateParts.week = intVal; newDateParts.weekType = 4; break;
+				case 'U' : newDateParts.week = intVal; newDateParts.weekType = 0; break;
+				case 'W' : newDateParts.week = intVal; newDateParts.weekType = 1; break;
+				case 'p' :
+				case 'P' :
+					newDateParts.meridian = ( rgxInput[i].toLowerCase() === 'am' ) ? -1 : 1;
+					break;
+				case 'b' : {
+					const monthIndex = this.monthsShort.indexOf( rgxInput[i] );
+					if ( monthIndex > -1 ) { newDateParts.month = monthIndex; }
+					break;
+				}
+				case 'B' : {
+					const monthIndex = this.monthsLong.indexOf( rgxInput[i] );
+					if ( monthIndex > -1 ) { newDateParts.month = monthIndex; }
+					break;
+				}
+				default :
+					break;
+			}
+		}
+
+		if ( newDateParts.meridian !== null ) {
+			if ( newDateParts.meridian === -1 && newDateParts.hour === 12 ) {
+				newDateParts.hour = 0;
+			}
+			if ( newDateParts.meridian === 1 && newDateParts.hour !== 12 ) {
+				newDateParts.hour = newDateParts.hour + 12;
+			}
+		}
+		
+		const testDate = new Date(
+			this.#unNull( newDateParts.year, 0 ),
+			this.#unNull( newDateParts.month, 0 ),
+			this.#unNull( newDateParts.date, 1 ),
+			this.#unNull( newDateParts.hour, 8 ),
+			this.#unNull( newDateParts.mins, 0 ),
+			this.#unNull( newDateParts.secs, 0 ),
+			0
+		);
+
+		if ( newDateParts.year < 100 && newDateParts.year !== -1 ) {
+			testDate.setFullYear(newDateParts.year);
+		}
+
+		/* If we got at least Y-m-d, and it's valid, return it */
+		if ( newDateParts.year !== null &&
+			newDateParts.month !== null &&
+			newDateParts.date !== null ) {
+
+			if ( !isNaN(testDate.getDate()) ) {
+				this.currentLocale = backupLocale;
+				return testDate;
+			}
+		}
+
+		if ( newDateParts.yearDay !== null ) {
+			testDate.setMonth(0);
+			testDate.setDate(1);
+			testDate.setDate(newDateParts.yearDay);
+		}
+
+		if ( locale !== null ) { this.currentLocale = backupLocale; }
+
+		if ( !isNaN(testDate.getDate()) ) {
+			return testDate;
+		}
+		return null;
+
+	}
+
+	get monthsShort() { return this.#monthsForLocale('short'); }
+	get monthsLong()  { return this.#monthsForLocale('long'); }
+
+	#monthsForLocale ( monthFormat ) {
+		const format = new Intl.DateTimeFormat(this.currentLocale, {month : monthFormat}).format;
+		return [...Array(12).keys()].map((m) => format(new Date(2001, m, 1)));
+	}
+
+	#unNull (value, myDefault) {
+		return ( value === null ) ? myDefault : value;
 	}
 }
