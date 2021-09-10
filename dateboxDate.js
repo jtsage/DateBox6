@@ -155,6 +155,9 @@ class DateBoxDate {
 	set H(value) { this.date.setHours(value); }
 	get H()      { return this.date.getHours(); }
 	
+	// %i : Minutes of day (00..59)
+	set i(value) { this.date.setMinutes(value); }
+	get i()      { return this.date.getMinutes(); }
 	// %I : 12-Hour, Hour of day (01..12)
 	get I() {
 		const currentHour = this.date.getHours();
@@ -214,6 +217,15 @@ class DateBoxDate {
 	set S(value) { this.date.setSeconds(value) ;}
 	get S() { return this.date.getSeconds(); }
 
+	// %T : Time zone offset as a digital (hours) (-24..+24)
+	get T() {
+		const offsetHours     = this.date.getTimezoneOffset() / 60;
+		const offsetDirection = offsetHours < 0 ? '-' : '+';
+		const offsetDigit     = Math.abs(offsetHours);
+
+		return `${offsetDirection}${(( offsetDigit < 10 ) ? '0' : '')}${offsetDigit}`;
+	}
+
 	// %u : The numeric day of the week (1-7), 1 = Sunday
 	get u() { return this.date.getDay() + 1; }
 
@@ -261,6 +273,7 @@ class DateBoxDate {
 	z(operator) {
 		const thisValue = this[operator];
 		if ( typeof thisValue !== 'number' ) {
+			// Why?  Because *everything* goes through here.  Don't zero pad name of month, etc.
 			return thisValue;
 		}
 		return ( parseInt(thisValue, 10) < 10 ) ?`0${thisValue}` : thisValue;
